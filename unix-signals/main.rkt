@@ -1,48 +1,56 @@
 #lang racket/base
 
+(module unix-signals-native racket
+
+  (require racket/runtime-path
+           ffi/unsafe)
+
+  (provide libracket-unix-signals)
+
+  (define-runtime-path unix-signals-so
+    (build-path (collection-path "unix-signals")
+                "private"
+                "compiled"
+                "native"
+                (system-library-subpath #f)
+                "libracket_unix_signals.so"))
+
+  (define libracket-unix-signals
+    (ffi-lib unix-signals-so)))
+
 (require ffi/unsafe
          ffi/unsafe/port
          ffi/unsafe/define
          racket/port
+
+         'unix-signals-native
+
          (rename-in racket/contract
                     [-> ->/c])
          (only-in racket/os getpid))
 
-(provide lookup-signal-number
-         lookup-signal-name
-         getpid
-         (contract-out
-          ;; These may not do what you want,
-          ;; but they shouldn't break invariants
-          ;; of the runtime system:
-          [next-signal-evt
-           (evt/c byte?)]
-           [read-signal
-            (->/c byte?)])
-         ;; These are unsafe:
-         (protect-out
-          (contract-out
-           [capture-signal!
-            (->/c (or/c symbol? fixnum?) boolean?)]
-           [ignore-signal!
-            (->/c (or/c symbol? fixnum?) boolean?)]
-           [release-signal!
-            (->/c (or/c symbol? fixnum?) boolean?)]
-           [send-signal!
-            (->/c fixnum? (or/c symbol? fixnum?) boolean?)])))
-
-(define (local-lib-dirs)
-  ;; FIXME: There's probably a better way to do this with
-  ;; define-runtime-path and cross-system-library-subpath,
-  ;; but this is what the bcrypt package is doing.
-  (list (build-path (collection-path "unix-signals")
-                    "private"
-                    "compiled"
-                    "native"
-                    (system-library-subpath #f))))
-
-(define libracket-unix-signals
-  (ffi-lib "libracket_unix_signals" #:get-lib-dirs local-lib-dirs))
+  (provide lookup-signal-number
+           lookup-signal-name
+           getpid
+           (contract-out
+            ;; These may not do what you want,
+            ;; but they shouldn't break invariants
+            ;; of the runtime system:
+            [next-signal-evt
+             (evt/c byte?)]
+            [read-signal
+             (->/c byte?)])
+           ;; These are unsafe:
+           (protect-out
+            (contract-out
+             [capture-signal!
+              (->/c (or/c symbol? fixnum?) boolean?)]
+             [ignore-signal!
+              (->/c (or/c symbol? fixnum?) boolean?)]
+             [release-signal!
+              (->/c (or/c symbol? fixnum?) boolean?)]
+             [send-signal!
+              (->/c fixnum? (or/c symbol? fixnum?) boolean?)])))
 
 (define-ffi-definer define-unix libracket-unix-signals
   #:default-make-fail make-not-available)
